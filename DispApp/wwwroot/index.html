@@ -1,0 +1,157 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Диспетчер задач</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.0/css/bootstrap.min.css" rel="stylesheet" />
+</head>
+<body>
+    <h2>Диспетчер задач:</h2>
+    <form name="dispForm">
+        <input type="hidden" name="id" value="0" />
+        <div class="form-group col-md-5">
+            <label for="name">Имя процесса:</label>
+            <input class="form-control" name="name" />
+        </div>
+        <div class="panel-body">
+            <button type="submit" id="submit" class="btn btn-primary">Запустить</button>
+            <a id="reset" class="btn btn-primary">Очистить</a>
+        </div>
+    </form>
+    <table class="table table-condensed table-striped  col-md-6">
+        <thead><tr><th>Id процесса</th><th>Имя процесса</th><th>Память</th><th></th></tr></thead>
+        <tbody>
+        </tbody>
+    </table>
+    <div>2020 © Чолак А.Д.</div>
+    <script>
+        // Получение всех процессов
+        async function Getdisps() {
+            // отправляет запрос и получаем ответ
+            const response = await fetch("/api/dispetcher", {
+                method: "GET",
+                headers: { "Accept": "application/json" }
+            });
+            // если запрос прошел нормально
+            if (response.ok === true) {
+                // получаем данные
+                const disps = await response.json();
+                let rows = document.querySelector("tbody");
+                disps.forEach(disp => {
+                    // добавляем полученные элементы в таблицу
+                    rows.append(row(disp));
+                });
+            }
+        }
+        // Получение одного процесса
+        async function Getdisp(id) {
+            const response = await fetch("/api/dispetcher/" + id, {
+                method: "GET",
+                headers: { "Accept": "application/json" }
+            });
+            if (response.ok === true) {
+                const disp = await response.json();
+                const form = document.forms["dispForm"];
+                form.elements["id"].value = disp.id;
+                form.elements["name"].value = disp.name;
+                form.elements["memory"].value = disp.memory;
+            }
+        }
+        // Запуск процесса
+        async function Createdisp(dispName) {
+
+            const response = await fetch("api/dispetcher", {
+                method: "POST",
+                headers: { "Accept": "application/json", "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: dispName
+                })
+            });
+            
+            if (response.ok === true) {
+                console.log(response.body);
+                const disp = await response.json();
+
+                reset();
+                document.querySelector("tbody").append(row(disp));
+            }
+        }
+       
+        // Завершить процесс
+        async function Deletedisp(id) {
+            const response = await fetch("/api/dispetcher/" + id, {
+                method: "DELETE",
+                headers: { "Accept": "application/json" }
+            });
+            if (response.ok === true) {
+                const disp = await response.json();
+                document.querySelector("tr[data-rowid='" + disp.id + "']").remove();
+            }
+        }
+
+        // сброс формы
+        function reset() {
+            const form = document.forms["dispForm"];
+            form.reset();
+            form.elements["id"].value = 0;
+        }
+        // создание строки для таблицы
+        function row(disp) {
+
+            const tr = document.createElement("tr");
+            tr.setAttribute("data-rowid", disp.id);
+
+            const idTd = document.createElement("td");
+            idTd.append(disp.id);
+            tr.append(idTd);
+
+            const nameTd = document.createElement("td");
+            nameTd.append(disp.name);
+            tr.append(nameTd);
+
+            const memoryTd = document.createElement("td");
+            memoryTd.append(disp.memory);
+            tr.append(memoryTd);
+
+            const linksTd = document.createElement("td");
+
+            const removeLink = document.createElement("a");
+            removeLink.setAttribute("data-id", disp.id);
+            removeLink.setAttribute("style", "cursor:pointer;padding:15px;");
+            removeLink.append("Завершить");
+            removeLink.addEventListener("click", e => {
+
+                e.preventDefault();
+                Deletedisp(disp.id);
+            });
+
+            linksTd.append(removeLink);
+            tr.appendChild(linksTd);
+
+            return tr;
+        }
+        // сброс значений формы
+        document.getElementById("reset").click(function (e) {
+
+            e.preventDefault();
+            reset();
+        })
+
+        // отправка формы
+        document.forms["dispForm"].addEventListener("submit", e => {
+            e.preventDefault();
+            const form = document.forms["dispForm"];
+            const id = form.elements["id"].value;
+            const name = form.elements["name"].value;
+            if (id == 0)
+                Createdisp(name);
+
+        });
+
+        // загрузка все процессов
+        Getdisps();
+
+    </script>
+</body>
+</html>
